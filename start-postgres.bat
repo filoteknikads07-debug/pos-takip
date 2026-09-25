@@ -1,0 +1,2 @@
+@echo off
+"C:\Program Files\PostgreSQL\16\bin\postgres.exe" -D "C:\Program Files\PostgreSQL\16\data"

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS ve Sürücü Takip Sistemi</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i data-lucide="credit-card" class="w-8 h-8 text-blue-400"></i>
+        <h1 class="text-xl font-bold tracking-wide">POS & Sürücü Takip Sistemi</h1>
+      </div>
+      <span class="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-full font-mono">
+        Port: 9999
+      </span>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- Özet İstatistik Kartları -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Toplam POS</p>
+          <h3 id="stat-total" class="text-2xl font-bold text-slate-800">0</h3>
+        </div>
+        <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><i data-lucide="layers"></i></div>
+      </div>
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Zimmetli (Sahada)</p>
+          <h3 id="stat-assigned" class="text-2xl font-bold text-amber-600">0</h3>
+        </div>
+        <div class="p-3 bg-amber-50 text-amber-600 rounded-lg"><i data-lucide="truck"></i></div>
+      </div>
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Boşta (Ofiste)</p>
+          <h3 id="stat-available" class="text-2xl font-bold text-emerald-600">0</h3>
+        </div>
+        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="check-circle-2"></i></div>
+      </div>
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Arızalı POS</p>
+          <h3 id="stat-faulty" class="text-2xl font-bold text-rose-600">0</h3>
+        </div>
+        <div class="p-3 bg-rose-50 text-rose-600 rounded-lg"><i data-lucide="alert-triangle"></i></div>
+      </div>
+    </div>
+
+    <!-- Yönetim Panelleri (2 Kolon) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Sol Kolon: Sürücü Yönetimi & Yeni POS Ekleme -->
+      <div class="space-y-6">
+        
+        <!-- Sürücü Ekle/Listele -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="users" class="w-5 h-5 text-blue-600"></i> Sürücü Yönetimi
+          </h2>
+          <form id="driver-form" class="space-y-3">
+            <input type="text" id="driver-name" placeholder="Sürücü Adı Soyadı" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="text" id="driver-phone" placeholder="Telefon No (İsteğe Bağlı)" class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm transition">
+              + Sürücü Ekle
+            </button>
+          </form>
+
+          <div class="border-t pt-3">
+            <p class="text-xs font-semibold text-slate-500 mb-2">Kayıtlı Sürücüler</p>
+            <ul id="driver-list" class="divide-y max-h-48 overflow-y-auto text-sm">
+              <!-- Sürücüler JS ile yüklenecek -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- POS Cihazı Ekle -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-600"></i> Yeni POS Ekle
+          </h2>
+          <form id="pos-form" class="space-y-3">
+            <input type="text" id="pos-serial" placeholder="POS Seri No / Cihaz Adı" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <input type="text" id="pos-bank" placeholder="Banka / Firma Adı (Örn: Garanti Pay)" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-sm transition">
+              + POS Cihazı Ekle
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- Sağ Kolon: POS Listesi & Zimmet/Durum İşlemleri -->
+      <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="credit-card" class="w-5 h-5 text-indigo-600"></i> POS Cihaz Durumları & Zimmet
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b bg-slate-50 text-xs font-semibold text-slate-500 uppercase">
+                <th class="p-3">Seri No / Banka</th>
+                <th class="p-3">Durum</th>
+                <th class="p-3">Mevcut Sürücü</th>
+                <th class="p-3 text-right">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="pos-table-body" class="divide-y text-sm">
+              <!-- POS Listesi JS ile yüklenecek -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Geçmiş Hareketler (Audit Log / Kimdeydi Takibi) -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="history" class="w-5 h-5 text-amber-600"></i> Geçmiş Dönük POS Hareketleri Logu
+        </h2>
+        <input type="text" id="history-search" placeholder="Geçmişte ara..." onkeyup="filterHistory()" class="px-3 py-1.5 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-amber-500">
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b bg-slate-50 text-xs font-semibold text-slate-500 uppercase">
+              <th class="p-3">Tarih / Saat</th>
+              <th class="p-3">POS Seri No</th>
+              <th class="p-3">İşlem / Durum</th>
+              <th class="p-3">İlgili Sürücü</th>
+              <th class="p-3">Not</th>
+              <th class="p-3 text-right">Sil</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body" class="divide-y text-sm font-mono text-slate-700">
+            <!-- Geçmiş Veriler JS ile buraya gelecek -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Sürücüye POS Zimmetle -->
+  <div id="assign-modal" class="fixed inset-0 bg-slate-900/60 z-50 p-4 items-center justify-center backdrop-blur-sm" style="display: none;" onclick="if(event.target === this) closeModal()">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-5 h-5 text-blue-600"></i> POS Cihazı Zimmetle
+        </h3>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg text-lg leading-none">&times;</button>
+      </div>
+      <p id="modal-pos-info" class="text-sm text-slate-700 font-medium bg-blue-50/80 p-3 rounded-lg border border-blue-100"></p>
+      
+      <form id="assign-form" class="space-y-4">
+        <input type="hidden" id="modal-pos-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Teslim Edilecek Sürücü <span class="text-rose-500">*</span></label>
+          <select id="modal-driver-select" required class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+            <!-- Sürücüler doldurulacak -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Açıklama / Not (Opsiyonel)</label>
+          <input type="text" id="modal-note" placeholder="Örn: 34 ABC 123 plakalı teslimat için verildi" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-100">İptal</button>
+          <button type="submit" id="btn-save-assign" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition">
+            Zimmetle ve Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let globalDrivers = [];
+    let globalPosList = [];
+    let globalHistory = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadDrivers();
+      loadPOS();
+      loadHistory();
+
+      // ESC tuşu ile modal kapatma
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+    });
+
+    // --- SÜRÜCÜ İŞLEMLERİ ---
+    async function loadDrivers() {
+      try {
+        const res = await fetch('/api/drivers');
+        globalDrivers = await res.json();
+        const list = document.getElementById('driver-list');
+        list.innerHTML = '';
+
+        if (globalDrivers.length === 0) {
+          list.innerHTML = '<li class="py-2 text-slate-400 text-xs italic">Henüz sürücü eklenmedi.</li>';
+        } else {
+          globalDrivers.forEach(d => {
+            list.innerHTML += `
+              <li class="py-2 flex justify-between items-center">
+                <span><span class="font-medium text-slate-700">${d.name}</span> <small class="text-slate-400">(${d.phone || 'Tel yok'})</small></span>
+                <button onclick="deleteDriver(${d.id})" class="text-rose-500 hover:text-rose-700 text-xs p-1" title="Sürücüyü Sil"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </li>`;
+          });
+        }
+        lucide.createIcons();
+      } catch (err) {
+        console.error('Sürücüler yüklenirken hata:', err);
+      }
+    }
+
+    document.getElementById('driver-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('driver-name').value.trim();
+      const phone = document.getElementById('driver-phone').value.trim();
+      if (!name) return;
+
+      try {
+        const res = await fetch('/api/drivers', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ name, phone })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('Sürücü eklenemedi: ' + (err.error || res.statusText));
+          return;
+        }
+        document.getElementById('driver-form').reset();
+        await loadDrivers();
+      } catch (err) {
+        alert('Bağlantı hatası: ' + err.message);
+      }
+    });
+
+    async function deleteDriver(id) {
+      if(!confirm("Sürücüyü silmek istediğinize emin misiniz?")) return;
+      try {
+        const res = await fetch(`/api/drivers/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('Silme hatası: ' + (err.error || res.statusText));
+          return;
+        }
+        await loadDrivers();
+        await loadPOS();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    // --- POS İŞLEMLERİ ---
+    async function loadPOS() {
+      try {
+        const res = await fetch('/api/pos');
+        globalPosList = await res.json();
+        const tbody = document.getElementById('pos-table-body');
+        tbody.innerHTML = '';
+
+        let total = globalPosList.length, assigned = 0, available = 0, faulty = 0;
+
+        if (globalPosList.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400 text-sm">Tanımlı POS cihazı bulunamadı.</td></tr>`;
+        } else {
+          globalPosList.forEach(p => {
+            if(p.status === 'Zimmetli') assigned++;
+            else if(p.status === 'Arızalı') faulty++;
+            else available++;
+
+            let statusBadge = p.status === 'Zimmetli' 
+              ? `<span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-semibold">Zimmetli</span>`
+              : p.status === 'Arızalı'
+              ? `<span class="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full text-xs font-semibold">Arızalı</span>`
+              : `<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-semibold">Boşta (Ofiste)</span>`;
+
+            tbody.innerHTML += `
+              <tr class="hover:bg-slate-50 transition">
+                <td class="p-3">
+                  <div class="font-bold text-slate-800">${p.serial_no}</div>
+                  <div class="text-xs text-slate-500">${p.bank_name}</div>
+                </td>
+                <td class="p-3">${statusBadge}</td>
+                <td class="p-3 font-medium text-slate-700">${p.driver_name || '<span class="text-slate-400">-</span>'}</td>
+                <td class="p-3 text-right space-x-1">
+                  ${p.status === 'Boşta' ? `
+                    <button onclick="openAssignModal(${p.id})" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-semibold transition shadow-sm">Zimmetle</button>
+                  ` : ''}
+                  ${p.status === 'Zimmetli' ? `
+                    <button onclick="returnPos(${p.id}, '${p.driver_name || ''}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg text-xs font-semibold transition shadow-sm">Teslim Al</button>
+                  ` : ''}
+                  ${p.status !== 'Arızalı' ? `
+                    <button onclick="markFaulty(${p.id})" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold transition">Arızalı İşaretle</button>
+                  ` : `
+                    <button onclick="markFixed(${p.id})" class="px-2.5 py-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-semibold transition">Tamir Edildi</button>
+                  `}
+                  <button onclick="deletePos(${p.id})" class="p-1.5 text-slate-400 hover:text-rose-600 transition" title="POS Cihazını Sil"><i data-lucide="trash" class="w-4 h-4 inline"></i></button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+
+        document.getElementById('stat-total').innerText = total;
+        document.getElementById('stat-assigned').innerText = assigned;
+        document.getElementById('stat-available').innerText = available;
+        document.getElementById('stat-faulty').innerText = faulty;
+
+        lucide.createIcons();
+      } catch (err) {
+        console.error('POS listesi yüklenirken hata:', err);
+      }
+    }
+
+    document.getElementById('pos-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const serial_no = document.getElementById('pos-serial').value.trim();
+      const bank_name = document.getElementById('pos-bank').value.trim();
+      if (!serial_no || !bank_name) return;
+
+      try {
+        const res = await fetch('/api/pos', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ serial_no, bank_name })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('POS eklenemedi: ' + (err.error || res.statusText));
+          return;
+        }
+        document.getElementById('pos-form').reset();
+        await loadPOS();
+        await loadHistory();
+      } catch (err) {
+        alert('Bağlantı hatası: ' + err.message);
+      }
+    });
+
+    async function returnPos(posId, driverName) {
+      try {
+        const res = await fetch(`/api/pos/${posId}/assign`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ 
+            driver_id: null, 
+            driver_name: driverName || null, 
+            status: 'Boşta', 
+            note: 'Ofise teslim alındı.' 
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('İşlem başarısız: ' + (err.error || res.statusText));
+          return;
+        }
+        await loadPOS();
+        await loadHistory();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    async function markFaulty(posId) {
+      const note = prompt("Arıza sebebini yazabilirsiniz (Opsiyonel):");
+      if (note === null) return; // İptal edildi
+      try {
+        const res = await fetch(`/api/pos/${posId}/assign`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ driver_id: null, driver_name: null, status: 'Arızalı', note: note || 'Arızalı olarak işaretlendi.' })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('İşlem başarısız: ' + (err.error || res.statusText));
+          return;
+        }
+        await loadPOS();
+        await loadHistory();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    async function markFixed(posId) {
+      try {
+        const res = await fetch(`/api/pos/${posId}/assign`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ driver_id: null, driver_name: null, status: 'Boşta', note: 'Tamir edildi, kullanıma hazır.' })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('İşlem başarısız: ' + (err.error || res.statusText));
+          return;
+        }
+        await loadPOS();
+        await loadHistory();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    async function deletePos(id) {
+      if(!confirm("POS cihazını silmek istediğinize emin misiniz?")) return;
+      try {
+        const res = await fetch(`/api/pos/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('Silme hatası: ' + (err.error || res.statusText));
+          return;
+        }
+        await loadPOS();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    // --- ZİMMET MODAL İŞLEMLERİ ---
+    function openAssignModal(id) {
+      if (!globalDrivers || globalDrivers.length === 0) {
+        alert("⚠️ Henüz kayıtlı sürücü bulunmamaktadır!\nLütfen önce sol taraftaki 'Sürücü Yönetimi' panelinden en az bir sürücü ekleyin.");
+        return;
+      }
+
+      const pos = globalPosList.find(p => p.id === id);
+      const serial = pos ? pos.serial_no : id;
+      const bank = pos ? pos.bank_name : '';
+
+      document.getElementById('modal-pos-id').value = id;
+      document.getElementById('modal-pos-info').innerHTML = `
+        <span class="font-bold text-slate-900">${serial}</span> ${bank ? '(' + bank + ')' : ''} cihazı sürücüye zimmetlenecektir.
+      `;
+      
+      // Sürücü dropdown'ını tazeleyelim
+      const select = document.getElementById('modal-driver-select');
+      select.innerHTML = '<option value="">-- Sürücü Seçiniz --</option>';
+      globalDrivers.forEach(d => {
+        select.innerHTML += `<option value="${d.id}">${d.name} ${d.phone ? '(' + d.phone + ')' : ''}</option>`;
+      });
+      document.getElementById('modal-note').value = '';
+
+      const modal = document.getElementById('assign-modal');
+      modal.style.display = 'flex';
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('assign-modal');
+      modal.style.display = 'none';
+    }
+
+    document.getElementById('assign-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const posId = document.getElementById('modal-pos-id').value;
+      const driverId = document.getElementById('modal-driver-select').value;
+      if (!driverId) {
+        alert("Lütfen teslim edilecek sürücüyü seçin.");
+        return;
+      }
+
+      const driverObj = globalDrivers.find(d => d.id == driverId);
+      const note = document.getElementById('modal-note').value.trim();
+      const btn = document.getElementById('btn-save-assign');
+      btn.disabled = true;
+      btn.innerText = 'Kaydediliyor...';
+
+      try {
+        const res = await fetch(`/api/pos/${posId}/assign`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            driver_id: parseInt(driverId, 10),
+            driver_name: driverObj ? driverObj.name : '',
+            status: 'Zimmetli',
+            note: note
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Zimmetleme kaydedilemedi.');
+        }
+
+        closeModal();
+        await loadPOS();
+        await loadHistory();
+      } catch (err) {
+        alert('Zimmetleme hatası: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Zimmetle ve Kaydet';
+      }
+    });
+
+    // --- GEÇMİŞ HAREKETLER (LOGLAR) ---
+    async function loadHistory() {
+      const res = await fetch('/api/history');
+      globalHistory = await res.json();
+      renderHistory(globalHistory);
+    }
+
+    function renderHistory(logs) {
+      const tbody = document.getElementById('history-table-body');
+      tbody.innerHTML = '';
+
+      logs.forEach(h => {
+        const dateFormatted = new Date(h.created_at).toLocaleString('tr-TR');
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 text-slate-500 text-xs">${dateFormatted}</td>
+            <td class="p-3 font-bold">${h.pos_serial}</td>
+            <td class="p-3"><span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">${h.action}</span></td>
+            <td class="p-3 text-blue-600 font-semibold">${h.driver_name || '-'}</td>
+            <td class="p-3 text-slate-500 text-xs">${h.note || '-'}</td>
+            <td class="p-3 text-right">
+              <button onclick="deleteHistoryItem(${h.id})" class="p-1 text-slate-400 hover:text-rose-600 transition" title="Geçmiş Kaydı Sil">
+                <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      lucide.createIcons();
+    }
+
+    async function deleteHistoryItem(id) {
+      if(!confirm("Bu geçmiş hareket kaydını silmek istediğinize emin misiniz?")) return;
+      await fetch(`/api/history/${id}`, { method: 'DELETE' });
+      loadHistory();
+    }
+
+    function filterHistory() {
+      const term = document.getElementById('history-search').value.toLowerCase();
+      const filtered = globalHistory.filter(h => 
+        (h.pos_serial && h.pos_serial.toLowerCase().includes(term)) ||
+        (h.driver_name && h.driver_name.toLowerCase().includes(term)) ||
+        (h.action && h.action.toLowerCase().includes(term))
+      );
+      renderHistory(filtered);
+    }
+  </script>
+</body>
+</html>
