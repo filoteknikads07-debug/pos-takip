@@ -28,60 +28,78 @@ const pool = new Pool({
     : {}),
   max: 10,               // maksimum bağlantı sayısı
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
 });
 
 pool.on('error', (err) => {
   console.error('PostgreSQL beklenmedik hata:', err.message);
 });
 
-// ─── Tabloları Oluştur (uygulama başlarken) ───────────────────────────────────
-async function initDB() {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+// ─── Yardımcı: Belirli süre bekle ────────────────────────────────────────────
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-    // Sürücüler Tablosu
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS drivers (
-        id   SERIAL PRIMARY KEY,
-        name TEXT   NOT NULL,
-        phone TEXT
-      )
-    `);
+// ─── Tabloları Oluştur (yeniden deneme mantığıyla) ────────────────────────────
+async function initDB(retries = 5, delay = 10000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`🔄 Veritabanına bağlanılıyor... (Deneme ${attempt}/${retries})`);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
 
-    // POS Cihazları Tablosu
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS pos_devices (
-        id                SERIAL PRIMARY KEY,
-        serial_no         TEXT   UNIQUE NOT NULL,
-        bank_name         TEXT   NOT NULL,
-        status            TEXT   NOT NULL DEFAULT 'Boşta',
-        current_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL
-      )
-    `);
+        // Sürücüler Tablosu
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS drivers (
+            id   SERIAL PRIMARY KEY,
+            name TEXT   NOT NULL,
+            phone TEXT
+          )
+        `);
 
-    // Geçmiş Hareket Logları Tablosu
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS pos_history (
-        id          SERIAL PRIMARY KEY,
-        pos_id      INTEGER,
-        pos_serial  TEXT,
-        driver_name TEXT,
-        action      TEXT NOT NULL,
-        note        TEXT,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
+        // POS Cihazları Tablosu
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS pos_devices (
+            id                SERIAL PRIMARY KEY,
+            serial_no         TEXT   UNIQUE NOT NULL,
+            bank_name         TEXT   NOT NULL,
+            status            TEXT   NOT NULL DEFAULT 'Boşta',
+            current_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL
+          )
+        `);
 
-    await client.query('COMMIT');
-    console.log('✅ PostgreSQL tabloları hazır.');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('❌ Tablo oluşturma hatası:', err.message);
-    process.exit(1);
-  } finally {
-    client.release();
+        // Geçmiş Hareket Logları Tablosu
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS pos_history (
+            id          SERIAL PRIMARY KEY,
+            pos_id      INTEGER,
+            pos_serial  TEXT,
+            driver_name TEXT,
+            action      TEXT NOT NULL,
+            note        TEXT,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )
+        `);
+
+        await client.query('COMMIT');
+        console.log('✅ PostgreSQL tabloları hazır.');
+        return; // Başarılı, fonksiyondan çık
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error(`❌ Deneme ${attempt}/${retries} başarısız: ${err.message}`);
+      if (attempt < retries) {
+        console.log(`⏳ ${delay / 1000} saniye sonra tekrar denenecek...`);
+        await sleep(delay);
+      } else {
+        console.error('❌ Tüm denemeler başarısız oldu. Uygulama kapanıyor.');
+        process.exit(1);
+      }
+    }
   }
 }
 
